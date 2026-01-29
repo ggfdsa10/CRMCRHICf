@@ -164,17 +164,21 @@ void OutputPolicyHepMC3::FillRHICfEvent(const CRMCoptions& cfg, const int nEvent
         fParticle -> SetLastDaughter(daughterIdx2);
 
         if(fRHICfRunType == kALL){continue;}
+        if(stat != 1){continue;} // only final state
 
-        // neutrino particle cut
-        if(11 < abs(pid) && abs(pid) < 19 ){continue;}
+        pid = abs(pid);
+        if(11 < pid && pid < 19 ){continue;} // cut the lepton (except electron)
+        if(e < 1.){continue;} // energy cut 1 GeV
+        if(pz <= 0.){continue;} // opposite direction cut
 
-        bool isNeutral = IsNeutralParticle(pid);
+        bool isInterest = IsInterestedParticle(pid);
         
         // cut the final state charged particle generated Z-position before end of DX magnet
-        if(!isNeutral && vz < 15000. && pz > 0){continue;}
+        if(!isInterest && vz < 15000.){continue;}
 
         int hit = GetRHICfGeoHit(vx, vy, vz, px, py, pz, e);
         if(hit < 0){continue;}
+
         RHICfHitTrkNum++;
     }
 
@@ -288,14 +292,10 @@ void OutputPolicyHepMC3::InitRHICfGeometry()
 
 int OutputPolicyHepMC3::GetRHICfGeoHit(double posX, double posY, double posZ, double px, double py, double pz, double e)
 {
-  if(e < 1.){return -1;} // energy cut 1 GeV
-
   double momMag = sqrt(px*px + py*py + pz*pz);
   double unitVecX = px/momMag;
   double unitVecY = py/momMag;
   double unitVecZ = pz/momMag;
-
-  if(unitVecZ < 0){return -1;} // opposite side cut
 
   double z = fRHICfDetZ - posZ;
   if(z < 0.){return -1;} // create z-position cut
@@ -309,16 +309,12 @@ int OutputPolicyHepMC3::GetRHICfGeoHit(double posX, double posY, double posZ, do
   return type;
 } 
 
-bool OutputPolicyHepMC3::IsNeutralParticle(int pid)
+bool OutputPolicyHepMC3::IsInterestedParticle(int pid)
 {
     // only listed for final state particles
     int pdg = abs(pid);
     switch(pdg)
     {
-        case 2212: return false; // p
-        case 11  : return false; // e
-        case 321 : return false; // charged K
-        case 211 : return false; // charged pi
         case 2112: return true; // n
         case 130 : return true; // K0_L
         case 22  : return true; // gamma
